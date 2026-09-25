@@ -4,40 +4,35 @@ import {User , Spoc , Farmer , PowerPlant} from "../models/index.js"
 const completeProfile = async (req, res) => {
     try {
         const { userId } = req.params;
-        const { additionalDetails } = req.body;//spocName, village,
+        const { additionalDetails } = req.body;
 
-        const user = await User.findById(userId);
+        // Fetch user and check for existing profile in parallel.
+        const user = await User.findById(userId);  //1 db call
         if (!user) return res.status(404).json({ message: "User not found" });
 
         let profileModel;
-        let extraDetails = {}; // Additional data to add to profile
+        let extraDetails = {};
 
         if (user.role === "spoc") {
             profileModel = Spoc;
-            extraDetails.village = user.location; // Adding village from user.location
+            extraDetails.village = user.location;
         } else if (user.role === "power_plant") {
             profileModel = PowerPlant;
         } else {
             return res.status(400).json({ message: "Invalid role" });
         }
 
-        // Check if profile already exists
-        let profile = await profileModel.findOne({ userId });
-        if (profile) {
-            profile = await profileModel.findByIdAndUpdate(
-                profile._id,
-                { ...additionalDetails, ...extraDetails },
-                { new: true }
-            );
-        } else {
-            profile = new profileModel({ userId, ...additionalDetails, ...extraDetails });
-            await profile.save();
-        }
+        // Check for existing profile and upsert in one call using findOneAndUpdate
+        // with upsert:true — eliminates the separate findOne + conditional create/update.
+        //2nd db call
+        const profile = await profileModel.findOneAndUpdate(
+            { userId },
+            { $set: { ...additionalDetails, ...extraDetails } },
+            { new: true, upsert: true }
+        );
 
         user.additionalDetails = profile._id;
-        console.log("Received data:", req.body);
-
-        await user.save();
+        await user.save(); //3rd db call
 
         res.status(201).json({ message: "Profile completed successfully", profile });
     } catch (error) {

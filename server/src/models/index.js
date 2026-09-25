@@ -7,5 +7,6 @@ import { Order } from "./Orders.models.js"
 import { Notification } from "./Notifications.model.js"
 import { Request } from "./Request.models.js"
 import { Otp } from "./Otp.models.js"
+import { PickupOtp } from "./PickupOtp.models.js"
 
-export {User , Farmer , Spoc , PowerPlant , ParaliList , Order , Notification , Request , Otp} 
+export {User , Farmer , Spoc , PowerPlant , ParaliList , Order , Notification , Request , Otp , PickupOtp} 

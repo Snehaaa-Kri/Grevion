@@ -8,7 +8,7 @@ const auth= async(req,res,next)=>{
 
         if(!token)
         {
-            return res.status(401).josn({
+            return res.status(401).json({
                 success:false,
                 message:"Token Missing"
             })

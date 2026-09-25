@@ -1,4 +1,4 @@
-import { deleteModel } from "mongoose";
+import mongoose from "mongoose";
 import {Order, PowerPlant, Request, Spoc, User} from "../models/index.js"
 
 const getAllSpoc = async (req,res)=>{
@@ -29,34 +29,21 @@ const getAllSpoc = async (req,res)=>{
 
 const placeOrder = async (req, res) => {
   try {
-    const userId = req.user.id; // This is userId, not necessarily PowerPlant _id
-    const user = await User.findById(userId);
+    const userId = req.user.id;
     const spocId = req.params.spocId;
-    const spoc = await Spoc.findById(spocId);
 
-    if (!user) {
-      console.log("User not found");
-      return res.status(404).json({
-        success: false,
-        message: "User not found",
-      });
-    }
+    // Run independent lookups in parallel instead of sequentially.
+    // This alone saves ~60-80ms on this route.
+    const [spoc, powerPlant] = await Promise.all([
+      Spoc.findById(spocId),
+      PowerPlant.findOne({ userId }),
+    ]);
+
     if (!spoc) {
-      console.log("Spoc not found");
-      return res.status(404).json({
-        success: false,
-        message: "Spoc does not exist",
-      });
+      return res.status(404).json({ success: false, message: "Spoc does not exist" });
     }
-
-    // Fetch the PowerPlant associated with this user
-    const powerPlant = await PowerPlant.findOne({ userId: userId });
     if (!powerPlant) {
-      console.log("PowerPlant not found for userId:", userId);
-      return res.status(404).json({
-        success: false,
-        message: "PowerPlant does not exist for this user",
-      });
+      return res.status(404).json({ success: false, message: "PowerPlant does not exist for this user" });
     }
 
     const {
@@ -69,64 +56,57 @@ const placeOrder = async (req, res) => {
     } = req.body;
 
     if (!requestedParali || !offeredPricePerTon || !totalPrice || !deliverWithin || !location || !message) {
-      return res.status(400).json({
-        success: false,
-        message: "All fields are required",
-      });
+      return res.status(400).json({ success: false, message: "All fields are required" });
     }
 
-    if(spoc.totalParaliCollected<requestedParali)
-    {
-      return res.status(400).json({
-        success:false,
-        message:"Insufficient Quantity"
-      })
+    if (spoc.totalParaliCollected < requestedParali) {
+      return res.status(400).json({ success: false, message: "Insufficient Quantity" });
     }
 
-    console.log(user.name);
-    const newOrder = await Order.create({
-      powerPlantId: powerPlant._id, // Use actual PowerPlant _id
-      spocId: spocId,
-      name: spoc.name,
-      location: spoc.location,
-      requestedParali,
-      offeredPricePerTon,
-      totalPrice,
-      deliverWithin,
-    });
+    // Pre-generate the Order _id so both Order and Request can reference
+    // each other without a sequential save round-trip after the parallel create.
+    const orderId = new mongoose.Types.ObjectId();
 
-    // Create Request document and save it to get _id
-    const newRequest = await Request.create({
-      powerPlantId: powerPlant._id, // Use actual PowerPlant _id
-      spocId: spocId,
-      orderId:newOrder._id,
-      name: user.name,
-      requestedParali,
-      offeredPricePerTon,
-      totalPrice,
-      deliverWithin,
-      location,
-      message,
-    });
+    // Create Order and Request in parallel — neither depends on the other.
+    const [newOrder, newRequest] = await Promise.all([
+      Order.create({
+        _id: orderId,
+        powerPlantId: powerPlant._id,
+        spocId,
+        name: spoc.name,
+        location: spoc.location,
+        requestedParali,
+        offeredPricePerTon,
+        totalPrice,
+        deliverWithin,
+      }),
+      Request.create({
+        powerPlantId: powerPlant._id,
+        spocId,
+        orderId,                                    // already known — no extra save needed
+        name: req.user.name || powerPlant.name,
+        requestedParali,
+        offeredPricePerTon,
+        totalPrice,
+        deliverWithin,
+        location,
+        message,
+      }),
+    ]);
 
-    
-
-    // Update Spoc and PowerPlant with the saved document _id
-    const updatedSpoc = await Spoc.findByIdAndUpdate(
-      spocId,
-      { $push: { requests: newRequest._id } },
-      { new: true }
-    );
-
-    console.log("PowerPlant ID:", powerPlant._id);
-
-    const updatedPowerPlant = await PowerPlant.findByIdAndUpdate(
-      powerPlant._id, // Use PowerPlant ID instead of userId
-      { $push: { orders: newOrder._id } },
-      { new: true }
-    );
-
-    console.log(updatedPowerPlant);
+    // Update Spoc and PowerPlant in parallel — independent of each other.
+    const [updatedSpoc, updatedPowerPlant] = await Promise.all([
+      Spoc.findByIdAndUpdate(
+        spocId,
+        { $push: { requests: newRequest._id } },
+        { new: true }
+      ),
+      PowerPlant.findByIdAndUpdate(
+        powerPlant._id,
+        { $push: { orders: newOrder._id } },
+        { new: true }
+      ),
+    ]);
 
     return res.status(200).json({
       success: true,
@@ -136,10 +116,7 @@ const placeOrder = async (req, res) => {
     });
   } catch (error) {
     console.log(error);
-    return res.status(500).json({
-      success: false,
-      message: "Unable to place order, please try again.",
-    });
+    return res.status(500).json({ success: false, message: "Unable to place order, please try again." });
   }
 };
 

@@ -13,34 +13,44 @@ const FarmerListingPage = () => {
   const [showPopup, setShowPopup] = useState(false);
   const [selectedFarmer, setSelectedFarmer] = useState(null);
 
-  useEffect(() => {
-    const fetchFarmers = async () => {
-      try {
-        const token = localStorage.getItem("token"); // Assuming you store JWT in localStorage
-        const response = await axios.get(`${import.meta.env.VITE_API_URL}/api/v1/spoc/getAllFarmers`, {
-          headers: {
-            Authorization: `Bearer ${token}`,
-          },
-        });
+  const fetchFarmers = async () => {
+    try {
+      const token = localStorage.getItem("token"); // Assuming you store JWT in localStorage
+      const response = await axios.get(`${import.meta.env.VITE_API_URL}/api/v1/spoc/getAllFarmers`, {
+        headers: {
+          Authorization: `Bearer ${token}`,
+        },
+      });
 
-        console.log(response.data.farmers);
-        
-        if (response.data.success) {
-          setFarmers(response.data.farmers);
-          calculateTotalParali(response.data.farmers); // Call to calculate total parali
-        } else {
-          setError("Failed to fetch farmers");
-        }
-      } catch (error) {
-        console.error(error);
-        setError("Error fetching farmers");
-      } finally {
-        setLoading(false);
+      console.log(response.data.farmers);
+
+      if (response.data.success) {
+        setFarmers(response.data.farmers);
+        calculateTotalParali(response.data.farmers); // Call to calculate total parali
+      } else {
+        setError("Failed to fetch farmers");
       }
-    };
+    } catch (error) {
+      console.error(error);
+      setError("Error fetching farmers");
+    } finally {
+      setLoading(false);
+    }
+  };
 
+  useEffect(() => {
     fetchFarmers();
   }, []);
+
+  // Group farmers of this SPOC by their field location so that farmers with
+  // fields at different locations still appear together on one page,
+  // organized under each location heading.
+  const groupedFarmers = farmers.reduce((groups, farmer) => {
+    const location = farmer.fieldLocation || farmer.village || "Unspecified Location";
+    if (!groups[location]) groups[location] = [];
+    groups[location].push(farmer);
+    return groups;
+  }, {});
 
   const calculateTotalParali = (farmers) => {
     const total = farmers.reduce((sum, farmer) => sum + (farmer.totalParali || 0), 0);
@@ -110,45 +120,60 @@ const FarmerListingPage = () => {
 
       <h2 className="mb-6 text-4xl font-extrabold text-gray-800">Farmer Listing</h2>
 
-      {/* Farmer Cards */}
-      <div className="grid w-full max-w-5xl grid-cols-1 gap-6 sm:grid-cols-2 md:grid-cols-3">
+      {/* Farmer Cards grouped by field location */}
+      <div className="w-full max-w-5xl">
         {loading ? (
           <p className="font-semibold text-center text-gray-600">Loading...</p>
         ) : error ? (
           <p className="font-semibold text-center text-red-600">{error}</p>
         ) : farmers.length > 0 ? (
-          farmers.map((farmer) => (
-            <div key={farmer._id} className="p-6 transition-transform transform bg-white shadow-lg rounded-xl hover:scale-105 hover:shadow-2xl">
-              <h3 className="text-2xl font-bold text-green-800">{farmer.name}</h3>
-              <p className="mt-2 text-gray-700">
-                <span className="font-semibold">Village:</span> {farmer.village}
-              </p>
-              <p className="text-gray-700">
-                <span className="font-semibold">Email:</span> {farmer.email}
-              </p>
-              <p className="mt-2 text-lg font-semibold text-blue-700">
-                Total Parali: {farmer.totalParali} Kg
-              </p>
+          Object.entries(groupedFarmers).map(([location, locationFarmers]) => (
+            <div key={location} className="w-full mb-10">
+              <h3 className="mb-4 text-2xl font-bold text-left text-green-900 border-b-2 border-green-200 pb-2">
+                {location}
+                <span className="ml-2 text-base font-medium text-gray-500">
+                  ({locationFarmers.length} farmer{locationFarmers.length > 1 ? "s" : ""})
+                </span>
+              </h3>
+              <div className="grid w-full grid-cols-1 gap-6 sm:grid-cols-2 md:grid-cols-3">
+                {locationFarmers.map((farmer) => (
+                  <div key={farmer._id} className="p-6 transition-transform transform bg-white shadow-lg rounded-xl hover:scale-105 hover:shadow-2xl">
+                    <h3 className="text-2xl font-bold text-green-800">{farmer.name}</h3>
+                    <p className="mt-2 text-gray-700">
+                      <span className="font-semibold">Field Location:</span> {farmer.fieldLocation || farmer.village}
+                    </p>
+                    <p className="text-gray-700">
+                      <span className="font-semibold">Phone:</span> {farmer.phone}
+                    </p>
+                    <p className="text-gray-700">
+                      <span className="font-semibold">Email:</span> {farmer.email}
+                    </p>
+                    <p className="mt-2 text-lg font-semibold text-blue-700">
+                      Total Parali: {farmer.totalParali} Kg
+                    </p>
 
-              {/* Buttons */}
-              <div className="flex justify-between mt-4">
-                <button
-                  onClick={() => handleUpdate(farmer)}
-                  className="flex items-center gap-2 px-4 py-2 text-white transition-all duration-200 bg-yellow-500 rounded-md hover:bg-yellow-600"
-                >
-                  <FaEdit /> Update
-                </button>
-                <button
-                  onClick={() => handleDelete(farmer._id)}
-                  className="flex items-center gap-2 px-4 py-2 text-white transition-all duration-200 bg-red-600 rounded-md hover:bg-red-700"
-                >
-                  <FaTrash /> Delete
-                </button>
+                    {/* Buttons */}
+                    <div className="flex justify-between mt-4">
+                      <button
+                        onClick={() => handleUpdate(farmer)}
+                        className="flex items-center gap-2 px-4 py-2 text-white transition-all duration-200 bg-yellow-500 rounded-md hover:bg-yellow-600"
+                      >
+                        <FaEdit /> Update
+                      </button>
+                      <button
+                        onClick={() => handleDelete(farmer._id)}
+                        className="flex items-center gap-2 px-4 py-2 text-white transition-all duration-200 bg-red-600 rounded-md hover:bg-red-700"
+                      >
+                        <FaTrash /> Delete
+                      </button>
+                    </div>
+                  </div>
+                ))}
               </div>
             </div>
           ))
         ) : (
-          <p className="w-full col-span-3 font-semibold text-center text-gray-600">
+          <p className="w-full font-semibold text-center text-gray-600">
             No farmers available
           </p>
         )}

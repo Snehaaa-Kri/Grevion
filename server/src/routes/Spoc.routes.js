@@ -1,11 +1,13 @@
 import express from "express"
 
-import { addFarmer, updateFarmer ,getAllFarmers , deleteFarmer, getAllRequests, acceptRequest,declineRequest, getSpocInfo } from "../controllers/index.js";
+import { sendFarmerOtp, verifyFarmerOtp, addFarmer, updateFarmer ,getAllFarmers , deleteFarmer, getAllRequests, acceptRequest,declineRequest, getSpocInfo } from "../controllers/index.js";
 
 import {auth, isSpoc} from  "../middlewares/index.js"
 const spocRouter= express.Router();
 
-spocRouter.post("/addFarmer",auth, isSpoc, addFarmer)
+spocRouter.post("/sendFarmerOtp", auth, isSpoc, sendFarmerOtp)
+spocRouter.post("/verifyFarmerOtp", auth, isSpoc, verifyFarmerOtp)
+spocRouter.post("/addFarmer", auth, isSpoc, addFarmer)
 spocRouter.get("/getAllFarmers",auth, isSpoc, getAllFarmers)
 spocRouter.delete("/deleteFarmer/:farmerId",auth, isSpoc, deleteFarmer)
 spocRouter.put("/updateFarmer/:farmerId",auth, isSpoc, updateFarmer)

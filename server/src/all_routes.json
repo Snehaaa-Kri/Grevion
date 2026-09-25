@@ -1,0 +1,674 @@
+{
+  "info": {
+    "_postman_id": "8f7e2c91-2f1d-4e6d-9f7b-grevion-api",
+    "name": "Grevion API",
+    "description": "Complete API collection for Grevion backend",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+  },
+  "variable": [
+    {
+      "key": "baseUrl",
+      "value": ""
+    },
+    {
+      "key": "token",
+      "value": ""
+    }
+  ],
+  "item": [
+    {
+      "name": "AUTH ROUTES",
+      "item": [
+        {
+          "name": "1. Send OTP",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"email\": \"sneha001705@gmail.com\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/auth/sendotp",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "auth",
+                "sendotp"
+              ]
+            }
+          }
+        },
+        {
+          "name": "2. Signup",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"name\": \"Test User\",\n  \"email\": \"test@gmail.com\",\n  \"password\": \"test1234\",\n  \"role\": \"spoc\",\n  \"otp\": \"123456\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/auth/signup",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "auth",
+                "signup"
+              ]
+            }
+          }
+        },
+        {
+          "name": "3. Login",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"email\": \"sneha001705@gmail.com\",\n  \"password\": \"yourpassword\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/auth/login",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "auth",
+                "login"
+              ]
+            }
+          }
+        },
+        {
+          "name": "4. Get User Info",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/auth/getUserInfo",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "auth",
+                "getUserInfo"
+              ]
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "PROFILE ROUTES",
+      "item": [
+        {
+          "name": "5. Complete Profile",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token}}"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/users/completeProfile/:userId",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "users",
+                "completeProfile",
+                ":userId"
+              ],
+              "variable": [
+                {
+                  "key": "userId",
+                  "value": ""
+                }
+              ]
+            }
+          }
+        },
+        {
+          "name": "6. Get User Profile",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/users/getUserProfile/:userId",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "users",
+                "getUserProfile",
+                ":userId"
+              ],
+              "variable": [
+                {
+                  "key": "userId",
+                  "value": ""
+                }
+              ]
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "SPOC ROUTES",
+      "item": [
+        {
+          "name": "7. Get SPOC Info",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/spoc/getSpocInfo",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "spoc",
+                "getSpocInfo"
+              ]
+            }
+          }
+        },
+        {
+          "name": "8. Get All Farmers",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/spoc/getAllFarmers",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "spoc",
+                "getAllFarmers"
+              ]
+            }
+          }
+        },
+        {
+          "name": "9. Send Farmer OTP",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token}}"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"phone\": \"8235090925\",\n  \"email\": \"farmer@gmail.com\",\n  \"channel\": \"email\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/spoc/sendFarmerOtp",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "spoc",
+                "sendFarmerOtp"
+              ]
+            }
+          }
+        },
+        {
+          "name": "10. Verify Farmer OTP",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token}}"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"phone\": \"8235090925\",\n  \"otp\": \"AB3X9Z\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/spoc/verifyFarmerOtp",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "spoc",
+                "verifyFarmerOtp"
+              ]
+            }
+          }
+        },
+        {
+          "name": "11. Add Farmer",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token}}"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"name\": \"Test Farmer\",\n  \"phone\": \"8235090925\",\n  \"email\": \"farmer@gmail.com\",\n  \"fieldLocation\": \"Ludhiana\",\n  \"totalParali\": \"500\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/spoc/addFarmer",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "spoc",
+                "addFarmer"
+              ]
+            }
+          }
+        },
+        {
+          "name": "12. Update Farmer",
+          "request": {
+            "method": "PUT",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token}}"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"name\": \"Updated Name\",\n  \"phone\": \"8235090925\",\n  \"email\": \"farmer@gmail.com\",\n  \"totalParali\": \"600\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/spoc/updateFarmer/:farmerId",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "spoc",
+                "updateFarmer",
+                ":farmerId"
+              ],
+              "variable": [
+                {
+                  "key": "farmerId",
+                  "value": ""
+                }
+              ]
+            }
+          }
+        },
+        {
+          "name": "13. Delete Farmer",
+          "request": {
+            "method": "DELETE",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/spoc/deleteFarmer/:farmerId",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "spoc",
+                "deleteFarmer",
+                ":farmerId"
+              ],
+              "variable": [
+                {
+                  "key": "farmerId",
+                  "value": ""
+                }
+              ]
+            }
+          }
+        },
+        {
+          "name": "14. Get All Requests",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/spoc/getAllRequests",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "spoc",
+                "getAllRequests"
+              ]
+            }
+          }
+        },
+        {
+          "name": "15. Accept Request",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/spoc/acceptRequest/:reqid",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "spoc",
+                "acceptRequest",
+                ":reqid"
+              ],
+              "variable": [
+                {
+                  "key": "reqid",
+                  "value": ""
+                }
+              ]
+            }
+          }
+        },
+        {
+          "name": "16. Decline Request",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/spoc/declineRequest/:reqid",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "spoc",
+                "declineRequest",
+                ":reqid"
+              ],
+              "variable": [
+                {
+                  "key": "reqid",
+                  "value": ""
+                }
+              ]
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "POWER PLANT ROUTES",
+      "item": [
+        {
+          "name": "17. Get All SPOCs",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/powerplant/getAllSpoc",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "powerplant",
+                "getAllSpoc"
+              ]
+            }
+          }
+        },
+        {
+          "name": "18. Place Order",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token}}"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"requestedParali\": 200\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/powerplant/placeOrder/:spocId",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "powerplant",
+                "placeOrder",
+                ":spocId"
+              ],
+              "variable": [
+                {
+                  "key": "spocId",
+                  "value": ""
+                }
+              ]
+            }
+          }
+        },
+        {
+          "name": "19. Get All Orders",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/powerplant/getAllOrders",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "powerplant",
+                "getAllOrders"
+              ]
+            }
+          }
+        },
+        {
+          "name": "20. Get Power Plant Info",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/powerplant/getPowerPlantInfo",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "powerplant",
+                "getPowerPlantInfo"
+              ]
+            }
+          }
+        }
+      ]
+    }
+  ]
+}

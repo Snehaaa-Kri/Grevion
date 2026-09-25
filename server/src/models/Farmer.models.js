@@ -9,7 +9,15 @@ const farmerSchema = new mongoose.Schema({
     type:String,
     required:true,
   },
+  phone: {
+    type: String,
+    required: true
+  },
   village: {
+    type: String,
+    required: true
+  },
+  fieldLocation: {
     type: String,
     required: true
   },

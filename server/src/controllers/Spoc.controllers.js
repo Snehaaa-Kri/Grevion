@@ -1,30 +1,78 @@
 import mongoose from "mongoose";
-import { Spoc, Farmer, Request, Order, PowerPlant } from "../models/index.js";
+import crypto from "crypto";
+import { Spoc, Farmer, Request, Order, PowerPlant, PickupOtp } from "../models/index.js";
 import mailSender from "../utils/MailSender.utils.js";
-const addFarmer = async (req, res) => {
+import msg91SendOtp from "../utils/Msg91Sender.utils.js";
+
+// ---------------------------------------------------------------------------
+// Helpers
+// ---------------------------------------------------------------------------
+
+// Normalize phone: bare 10-digit Indian numbers get a +91 prefix so the same
+// number is stored/matched consistently between send and verify.
+const normalizePhone = (phone) => {
+    const raw = String(phone || "").trim().replace(/[\s-]/g, "");
+    if (raw.startsWith("+")) return raw;
+    if (/^\d{10}$/.test(raw)) return `+91${raw}`;
+    return raw;
+};
+
+// SMS OTP: 6 digits only — MSG91's OTP API strictly requires numeric values.
+const SMS_OTP_CHARSET = "0123456789";
+// Email OTP: 6 alphanumeric characters (upper + lower + digits).
+const EMAIL_OTP_CHARSET =
+    "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789";
+
+const generatePickupOtp = (length = 6, charset = EMAIL_OTP_CHARSET) => {
+    let otp = "";
+    for (let i = 0; i < length; i++) {
+        const idx = crypto.randomInt(0, charset.length);
+        otp += charset[idx];
+    }
+    return otp;
+};
+
+// Build the OTP email body sent to the farmer.
+const buildOtpEmailBody = (otp, spocName = "your SPOC") => `
+    <div style="font-family:sans-serif;max-width:480px;margin:auto;padding:24px;border:1px solid #e5e7eb;border-radius:8px">
+        <h2 style="color:#166534">Grevion Pickup Verification</h2>
+        <p>Hi,</p>
+        <p>${spocName} is adding you as a farmer on the Grevion platform. Please share the OTP below to verify your pickup:</p>
+        <div style="font-size:2rem;font-weight:bold;letter-spacing:0.25rem;text-align:center;padding:16px 0;color:#15803d">
+            ${otp}
+        </div>
+        <p style="color:#6b7280;font-size:0.85rem">This OTP is valid for <strong>1 minute</strong> and can be used only once. Do not share it with anyone other than your SPOC.</p>
+        <p style="color:#6b7280;font-size:0.85rem">If you did not expect this message, please ignore it.</p>
+        <hr style="border-color:#e5e7eb;margin:16px 0"/>
+        <p style="color:#9ca3af;font-size:0.75rem">Grevion &mdash; Connecting SPOCs and Power Plants</p>
+    </div>`;
+
+// ---------------------------------------------------------------------------
+// sendFarmerOtp
+// Tries SMS first (channel="sms") or email (channel="email").
+// If SMS delivery fails for any reason, automatically falls back to email
+// so the farmer always gets the OTP.
+// ---------------------------------------------------------------------------
+const sendFarmerOtp = async (req, res) => {
     try {
-        const userId = req.user.id; 
-        console.log(userId);
+        const userId = req.user.id;
+        // channel: "sms" | "email"  (default "sms", auto-falls back to email)
+        const { phone, email, channel = "sms" } = req.body;
 
-        const {name, phone,email, totalParali } = req.body;
-
-        if (!email || !name || ! phone ||!totalParali) {
+        if (!phone || !email) {
             return res.status(400).json({
                 success: false,
-                message: "All fields are required"
+                message: "Farmer phone number and email are required"
             });
         }
 
-        
-        const existingFarmer = await Farmer.findOne({ email });
-        if (existingFarmer) {
+        if (!["sms", "email"].includes(channel)) {
             return res.status(400).json({
                 success: false,
-                message: "Farmer already exists"
+                message: "channel must be 'sms' or 'email'"
             });
         }
 
-        // Find the SPOC associated with this user
         const spoc = await Spoc.findOne({ userId });
         if (!spoc) {
             return res.status(404).json({
@@ -33,21 +81,229 @@ const addFarmer = async (req, res) => {
             });
         }
 
-        // Create a new farmer and associate with the SPOC
-        console.log(spoc.location)
+        const farmerPhone = normalizePhone(phone);
+        const farmerEmail = String(email).trim().toLowerCase();
+
+        // Invalidate any prior OTPs for this farmer + SPOC.
+        await PickupOtp.deleteMany({ farmerPhone, spocId: spoc._id });
+
+        // Generate a unique OTP.
+        // SMS channel uses numeric-only (MSG91 requirement).
+        // Email channel uses full alphanumeric.
+        const charset = channel === "sms" ? SMS_OTP_CHARSET : EMAIL_OTP_CHARSET;
+        let otp;
+        let duplicate;
+        do {
+            otp = generatePickupOtp(6, charset);
+            duplicate = await PickupOtp.findOne({ otp });
+        } while (duplicate);
+
+        await PickupOtp.create({ farmerPhone, farmerEmail, otp, spocId: spoc._id });
+
+        // --- Attempt delivery ---
+        let deliveredVia = channel;
+        let smsError = null;
+
+        if (channel === "sms") {
+            try {
+                await msg91SendOtp(farmerPhone, otp);
+            } catch (err) {
+                // SMS failed — fall back to email automatically.
+                smsError = err.message;
+                console.warn(`[sendFarmerOtp] SMS failed (${err.message}), falling back to email.`);
+                deliveredVia = "email";
+            }
+        }
+
+        // Send email if channel is "email" OR sms fallback was triggered.
+        if (deliveredVia === "email") {
+            try {
+                await mailSender(
+                    farmerEmail,
+                    "Grevion Pickup Verification OTP",
+                    buildOtpEmailBody(otp, spoc.name || "Your SPOC")
+                );
+            } catch (mailErr) {
+                // Both SMS and email failed — clean up and surface the error.
+                await PickupOtp.deleteMany({ farmerPhone, spocId: spoc._id });
+                console.error("[sendFarmerOtp] Email fallback also failed:", mailErr.message);
+                return res.status(502).json({
+                    success: false,
+                    message: "OTP delivery failed on both SMS and email. Please try again."
+                });
+            }
+        }
+
+        const channelLabel = deliveredVia === "sms"
+            ? "farmer's phone via SMS"
+            : `farmer's email${smsError ? " (SMS failed, used email fallback)" : ""}`;
+
+        return res.status(200).json({
+            success: true,
+            deliveredVia,
+            message: `OTP sent to ${channelLabel}`
+        });
+    } catch (error) {
+        console.error("Error in sendFarmerOtp:", error);
+        return res.status(500).json({
+            success: false,
+            message: "Unable to generate OTP, please try again"
+        });
+    }
+};
+
+// ---------------------------------------------------------------------------
+// verifyFarmerOtp
+// SPOC enters the OTP the farmer received. On match, the PickupOtp record is
+// marked `verified: true`. The farmer is NOT created here — addFarmer does
+// that and checks the verified flag. This separation means the SPOC can't
+// accidentally skip verification.
+// ---------------------------------------------------------------------------
+const verifyFarmerOtp = async (req, res) => {
+    try {
+        const userId = req.user.id;
+        const { phone, otp } = req.body;
+
+        if (!phone || !otp) {
+            return res.status(400).json({
+                success: false,
+                message: "Phone and OTP are required"
+            });
+        }
+
+        const spoc = await Spoc.findOne({ userId });
+        if (!spoc) {
+            return res.status(404).json({
+                success: false,
+                message: "SPOC not found"
+            });
+        }
+
+        const farmerPhone = normalizePhone(phone);
+
+        const otpRecord = await PickupOtp.findOne({
+            farmerPhone,
+            spocId: spoc._id,
+        }).sort({ createdAt: -1 });
+
+        if (!otpRecord) {
+            return res.status(400).json({
+                success: false,
+                message: "OTP has expired or was not requested. Please resend."
+            });
+        }
+
+        if (otpRecord.used) {
+            return res.status(400).json({
+                success: false,
+                message: "This OTP has already been used"
+            });
+        }
+
+        if (String(otp).trim() !== otpRecord.otp) {
+            return res.status(400).json({
+                success: false,
+                verified: false,
+                message: "Incorrect OTP. Farmer not verified."
+            });
+        }
+
+        // Mark as verified so addFarmer can proceed.
+        otpRecord.verified = true;
+        await otpRecord.save();
+
+        return res.status(200).json({
+            success: true,
+            verified: true,
+            message: "Farmer verified successfully"
+        });
+    } catch (error) {
+        console.error("Error in verifyFarmerOtp:", error);
+        return res.status(500).json({
+            success: false,
+            message: "Unable to verify OTP, please try again"
+        });
+    }
+};
+
+const addFarmer = async (req, res) => {
+    try {
+        const userId = req.user.id;
+
+        const { name, phone, email, totalParali, fieldLocation } = req.body;
+
+        if (!email || !name || !phone || !totalParali || !fieldLocation) {
+            return res.status(400).json({
+                success: false,
+                message: "All fields are required"
+            });
+        }
+
+        const existingFarmer = await Farmer.findOne({ email });
+        if (existingFarmer) {
+            return res.status(400).json({
+                success: false,
+                message: "Farmer already exists"
+            });
+        }
+
+        const spoc = await Spoc.findOne({ userId });
+        if (!spoc) {
+            return res.status(404).json({
+                success: false,
+                message: "SPOC not found for this user"
+            });
+        }
+
+        const farmerPhone = normalizePhone(phone);
+
+        // Gate: farmer must have verified the OTP before they can be added.
+        const otpRecord = await PickupOtp.findOne({
+            farmerPhone,
+            spocId: spoc._id,
+        }).sort({ createdAt: -1 });
+
+        if (!otpRecord) {
+            return res.status(400).json({
+                success: false,
+                message: "Farmer not verified. OTP has expired or was not requested — please resend."
+            });
+        }
+
+        if (!otpRecord.verified) {
+            return res.status(403).json({
+                success: false,
+                message: "Farmer not verified. Please verify the OTP before adding the farmer."
+            });
+        }
+
+        if (otpRecord.used) {
+            return res.status(400).json({
+                success: false,
+                message: "This verification has already been used"
+            });
+        }
+
+        // Create the farmer record.
         const newFarmer = await Farmer.create({
             name,
             email,
             phone,
-            village: spoc.location,  
+            village: spoc.location,
+            fieldLocation,
             totalParali,
             spocId: spoc._id
         });
-        console.log(newFarmer)
-        // Update Spoc by pushing farmer's ObjectId
+
+        // Consume the OTP record so it can't be reused.
+        otpRecord.used = true;
+        await otpRecord.save();
+        await PickupOtp.deleteMany({ farmerPhone, spocId: spoc._id });
+
+        // Update SPOC aggregates.
         await Spoc.findByIdAndUpdate(
             spoc._id,
-            { $push: { farmers: newFarmer._id },$inc: { totalParaliCollected: totalParali }  },
+            { $push: { farmers: newFarmer._id }, $inc: { totalParaliCollected: totalParali } },
             { new: true }
         );
 
@@ -410,4 +666,4 @@ const getSpocInfo= async(req,res)=>{
 
 
 
-export  {addFarmer, updateFarmer, deleteFarmer, getAllFarmers, getAllRequests, acceptRequest, declineRequest,getSpocInfo};
+export { sendFarmerOtp, verifyFarmerOtp, addFarmer, updateFarmer, deleteFarmer, getAllFarmers, getAllRequests, acceptRequest, declineRequest, getSpocInfo };

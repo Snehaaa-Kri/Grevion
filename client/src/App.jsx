@@ -37,7 +37,9 @@ const App = () => {
 
   return (
     <LoginContextProvider value={{}}>
+      <div className="flex flex-col min-h-screen">
       <Navbar />
+      <main className="flex-1">
       <Routes>
         <Route path="/" element={<LandingPage />} />
         <Route path="/landingPage" element={<LandingPage />} />
@@ -77,7 +79,9 @@ const App = () => {
         <Route path='/contact-us' element={<ContactUs/>}/>
         <Route path='/blog' element={<Blog/>}/>
       </Routes>
+      </main>
       <Footer />
+      </div>
     </LoginContextProvider>
   );
 };

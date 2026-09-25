@@ -7,6 +7,8 @@ const mailSender = async (email, title, body) => {
     try {
         const transporter = nodemailer.createTransport({
             host: process.env.MAIL_HOST,
+            port: Number(process.env.MAIL_PORT) || 587,
+            secure: Number(process.env.MAIL_PORT) === 465, // true for 465, false for 587
             auth: {
                 user: process.env.MAIL_USER,
                 pass: process.env.MAIL_PASS,
@@ -23,7 +25,8 @@ const mailSender = async (email, title, body) => {
         console.log(info);
         return info;
     } catch (error) {
-        console.error(error.message);
+        console.error("Mail send failed:", error.message);
+        throw error;
     }
 };
 

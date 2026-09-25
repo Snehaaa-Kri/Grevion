@@ -5,16 +5,36 @@ import connectDB from "./config/db.js";
 import {userRouter, spocRouter, PowerPlantRouter, paymentRouter} from "./routes/index.js"
 import cookieParser from "cookie-parser"
 import {completeProfileRouter} from "./routes/index.js"
+import performanceLogger from "./middlewares/performanceLogger.middleware.js"
 dotenv.config();
 
 const app = express();
 
+// Allowed origins for CORS. Vite may switch ports (5173 -> 5174) if one is busy,
+// so we allow the common dev ports plus anything set in FRONTEND_URL.
+const allowedOrigins = [
+  process.env.FRONTEND_URL,
+  "http://localhost:5173",
+  "http://localhost:5174",
+  "http://127.0.0.1:5173",
+  "http://127.0.0.1:5174",
+].filter(Boolean);
+
+console.log("Allowed CORS origins:", allowedOrigins);
+
 app.use(cors({
-  origin: process.env.FRONTEND_URL, // Allow frontend to connect
+  origin: (origin, callback) => {
+    // Allow requests with no origin (curl, mobile apps, same-origin server calls)
+    if (!origin || allowedOrigins.includes(origin)) {
+      return callback(null, true);
+    }
+    return callback(new Error(`Not allowed by CORS: ${origin}`));
+  },
   credentials: true, // Allow credentials (cookies, authorization headers, etc.)
 }));
 app.use(express.json());
 app.use(cookieParser());
+app.use(performanceLogger); // log response time for every request
 
 connectDB();
 
