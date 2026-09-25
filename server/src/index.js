@@ -6,6 +6,7 @@ import {userRouter, spocRouter, PowerPlantRouter, paymentRouter} from "./routes/
 import cookieParser from "cookie-parser"
 import {completeProfileRouter} from "./routes/index.js"
 import performanceLogger from "./middlewares/performanceLogger.middleware.js"
+import errorHandler from "./middlewares/errorHandler.middleware.js"
 dotenv.config();
 
 const app = express();
@@ -49,6 +50,8 @@ app.use("/api/v1/users" , completeProfileRouter)
 app.use("/api/v1/powerplant", PowerPlantRouter)
 app.use("/api/payment", paymentRouter);
 
+// ↓ ADD THIS — must be the very last app.use() - below the routes otherwise routes errors won't be handled via this!
+app.use(errorHandler);
 
 const PORT = process.env.PORT || 8000;
 app.listen(PORT, () => console.log(`Server running on port ${PORT}`));

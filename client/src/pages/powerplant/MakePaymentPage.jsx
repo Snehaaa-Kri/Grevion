@@ -1,9 +1,8 @@
-import React from 'react'
+import React from 'react';
+import Checkout from './Checkout';
 
 function MakePaymentPage() {
-  return (
-    <div>MakePaymentPage</div>
-  )
+  return <Checkout />;
 }
 
-export default MakePaymentPage
+export default MakePaymentPage;

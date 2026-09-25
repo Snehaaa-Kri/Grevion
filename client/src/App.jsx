@@ -20,6 +20,7 @@ import SpocProfile from './pages/spoc/SpocProfilePage.jsx';
 
 import PowerplantDashboard from './pages/powerplant/PowerplantDashboard.jsx';
 import MakePayment from './pages/powerplant/MakePaymentPage.jsx';
+import Checkout from './pages/powerplant/Checkout.jsx';
 import MyOrdersPage from './pages/powerplant/MyOrdersPage.jsx';
 import SpocsListing from './pages/powerplant/SpocsListingPage.jsx';
 import ProtectedRoute from './components/ProtectedRoute.jsx';
@@ -67,6 +68,7 @@ const App = () => {
           <Route element={<PowerPlantLayout/>}>
             <Route path="dashboard" element={<PowerplantDashboard />} />
             <Route path="make-payment" element={<MakePayment />} />
+            <Route path="payment" element={<Checkout />} />
             <Route path="my-orders" element={<MyOrdersPage />} />
             <Route path="spocs-listing" element={<SpocsListing />} />
             <Route path="profile" element={<PowerPlantProfile />} />
