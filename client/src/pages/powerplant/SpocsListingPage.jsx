@@ -19,7 +19,8 @@ const SpocListingPage = () => {
     message: "",
   });
   const [selectedSpocId, setSelectedSpocId] = useState(null);
-  const [searchQuery, setSearchQuery] = useState(""); 
+  const [searchQuery, setSearchQuery] = useState("");
+  const [orderErrors, setOrderErrors] = useState({});
 
   useEffect(() => {
     const fetchSpocs = async () => {
@@ -60,7 +61,33 @@ const SpocListingPage = () => {
     setFormData({ ...formData, [e.target.name]: e.target.value });
   };
 
+  // Validate place-order form fields.
+  const validateOrderForm = (data) => {
+    const errs = {};
+    if (!data.requestedParali || isNaN(data.requestedParali) || Number(data.requestedParali) < 1)
+      errs.requestedParali = "Enter a valid quantity (min 1 kg)";
+    if (!data.offeredPricePerTon || isNaN(data.offeredPricePerTon) || Number(data.offeredPricePerTon) <= 0)
+      errs.offeredPricePerTon = "Enter a valid price per ton";
+    if (!data.totalPrice || isNaN(data.totalPrice) || Number(data.totalPrice) <= 0)
+      errs.totalPrice = "Enter a valid total price";
+    if (!data.deliverWithin || isNaN(data.deliverWithin) || Number(data.deliverWithin) < 1)
+      errs.deliverWithin = "Enter delivery days (min 1)";
+    if (!data.location.trim())
+      errs.location = "Location is required";
+    if (!data.message.trim())
+      errs.message = "Message is required";
+    else if (data.message.trim().length > 500)
+      errs.message = "Message cannot exceed 500 characters";
+    return errs;
+  };
+
   const handleSubmit = async () => {
+    const errs = validateOrderForm(formData);
+    if (Object.keys(errs).length > 0) {
+      setOrderErrors(errs);
+      return;
+    }
+    setOrderErrors({});
     try {
       const token = localStorage.getItem("token");
       await axios.post(
@@ -170,60 +197,57 @@ const SpocListingPage = () => {
 
       {showModal && (
         <div className="fixed inset-0 flex items-center justify-center bg-gray-900 bg-opacity-50">
-          <div className="p-6 bg-white rounded-lg shadow-lg w-96">
+          <div className="p-6 bg-white rounded-lg shadow-lg w-96 max-h-[90vh] overflow-y-auto">
             <h2 className="mb-4 text-xl font-bold">Place Order</h2>
-            <input
-              type="text"
-              name="requestedParali"
-              placeholder="Requested Parali"
-              className="w-full p-2 mb-2 border rounded"
-              onChange={handleChange}
-            />
-            <input
-              type="text"
-              name="offeredPricePerTon"
-              placeholder="Offered Price per Ton"
-              className="w-full p-2 mb-2 border rounded"
-              onChange={handleChange}
-            />
-            <input
-              type="text"
-              name="totalPrice"
-              placeholder="Total Price"
-              className="w-full p-2 mb-2 border rounded"
-              onChange={handleChange}
-            />
-            <input
-              type="text"
-              name="deliverWithin"
-              placeholder="Deliver Within"
-              className="w-full p-2 mb-2 border rounded"
-              onChange={handleChange}
-            />
-            <input
-              type="text"
-              name="location"
-              placeholder="Location"
-              className="w-full p-2 mb-2 border rounded"
-              onChange={handleChange}
-            />
-            <textarea
-              name="message"
-              placeholder="Message"
-              className="w-full p-2 mb-2 border rounded"
-              onChange={handleChange}
-            ></textarea>
+
+            <div className="mb-2">
+              <input type="number" name="requestedParali" placeholder="Requested Parali (kg)"
+                className={`w-full p-2 border rounded ${orderErrors.requestedParali ? "border-red-500" : ""}`}
+                onChange={handleChange} />
+              {orderErrors.requestedParali && <p className="text-red-500 text-xs mt-1">{orderErrors.requestedParali}</p>}
+            </div>
+
+            <div className="mb-2">
+              <input type="number" name="offeredPricePerTon" placeholder="Offered Price per Ton"
+                className={`w-full p-2 border rounded ${orderErrors.offeredPricePerTon ? "border-red-500" : ""}`}
+                onChange={handleChange} />
+              {orderErrors.offeredPricePerTon && <p className="text-red-500 text-xs mt-1">{orderErrors.offeredPricePerTon}</p>}
+            </div>
+
+            <div className="mb-2">
+              <input type="number" name="totalPrice" placeholder="Total Price"
+                className={`w-full p-2 border rounded ${orderErrors.totalPrice ? "border-red-500" : ""}`}
+                onChange={handleChange} />
+              {orderErrors.totalPrice && <p className="text-red-500 text-xs mt-1">{orderErrors.totalPrice}</p>}
+            </div>
+
+            <div className="mb-2">
+              <input type="number" name="deliverWithin" placeholder="Deliver Within (days)"
+                className={`w-full p-2 border rounded ${orderErrors.deliverWithin ? "border-red-500" : ""}`}
+                onChange={handleChange} />
+              {orderErrors.deliverWithin && <p className="text-red-500 text-xs mt-1">{orderErrors.deliverWithin}</p>}
+            </div>
+
+            <div className="mb-2">
+              <input type="text" name="location" placeholder="Location"
+                className={`w-full p-2 border rounded ${orderErrors.location ? "border-red-500" : ""}`}
+                onChange={handleChange} />
+              {orderErrors.location && <p className="text-red-500 text-xs mt-1">{orderErrors.location}</p>}
+            </div>
+
+            <div className="mb-2">
+              <textarea name="message" placeholder="Message (max 500 chars)"
+                className={`w-full p-2 border rounded ${orderErrors.message ? "border-red-500" : ""}`}
+                onChange={handleChange} />
+              {orderErrors.message && <p className="text-red-500 text-xs mt-1">{orderErrors.message}</p>}
+            </div>
+
             <div className="flex justify-end">
-              <button
-                className="px-4 py-2 mr-2 text-white bg-gray-400 rounded"
-                onClick={() => setShowModal(false)}
-              >
+              <button className="px-4 py-2 mr-2 text-white bg-gray-400 rounded"
+                onClick={() => { setShowModal(false); setOrderErrors({}); }}>
                 Cancel
               </button>
-              <button
-                className="px-4 py-2 text-white bg-green-800 rounded"
-                onClick={handleSubmit}
-              >
+              <button className="px-4 py-2 text-white bg-green-800 rounded" onClick={handleSubmit}>
                 Submit
               </button>
             </div>

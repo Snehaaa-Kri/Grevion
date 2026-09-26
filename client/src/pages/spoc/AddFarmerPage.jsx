@@ -27,6 +27,43 @@ const CHANNELS = [
   },
 ];
 
+// ---------------------------------------------------------------------------
+// Validation helpers
+// ---------------------------------------------------------------------------
+const validateFarmerForm = ({ name, phone, email, fieldLocation, totalParali }) => {
+  const errors = {};
+
+  if (!name.trim()) {
+    errors.name = "Name is required";
+  } else if (name.trim().length < 2 || name.trim().length > 50) {
+    errors.name = "Name must be between 2 and 50 characters";
+  }
+
+  if (!phone.trim()) {
+    errors.phone = "Phone number is required";
+  } else if (!/^(\+91)?\d{10}$/.test(phone.trim())) {
+    errors.phone = "Enter a valid 10-digit phone number";
+  }
+
+  if (!email.trim()) {
+    errors.email = "Email is required";
+  } else if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email.trim())) {
+    errors.email = "Enter a valid email address";
+  }
+
+  if (!fieldLocation.trim()) {
+    errors.fieldLocation = "Field location is required";
+  }
+
+  if (!totalParali && totalParali !== 0) {
+    errors.totalParali = "Total parali is required";
+  } else if (isNaN(totalParali) || Number(totalParali) < 1) {
+    errors.totalParali = "Total parali must be at least 1 kg";
+  }
+
+  return errors;
+};
+
 const AddFarmerPage = () => {
   const [formData, setFormData] = useState({
     name: "",
@@ -45,11 +82,12 @@ const AddFarmerPage = () => {
   const [verifying, setVerifying]       = useState(false);
   const [deliveredVia, setDeliveredVia] = useState("");
 
-  const [loading, setLoading] = useState(false);
-  const [message, setMessage] = useState("");
-  const [error, setError]     = useState("");
-  const [otpMsg, setOtpMsg]   = useState("");
-  const [otpErr, setOtpErr]   = useState("");
+  const [loading, setLoading]     = useState(false);
+  const [message, setMessage]     = useState("");
+  const [error, setError]         = useState("");
+  const [otpMsg, setOtpMsg]       = useState("");
+  const [otpErr, setOtpErr]       = useState("");
+  const [fieldErrors, setFieldErrors] = useState({}); // per-field validation errors
 
   // ── countdown ──────────────────────────────────────────────────────────────
   useEffect(() => {
@@ -64,6 +102,8 @@ const AddFarmerPage = () => {
   const handleChange = (e) => {
     const { name, value } = e.target;
     setFormData((prev) => ({ ...prev, [name]: value }));
+    // Clear field-level error as user types.
+    if (fieldErrors[name]) setFieldErrors((prev) => ({ ...prev, [name]: "" }));
     if ((name === "phone" || name === "email") && otpSent) resetOtpState();
   };
 
@@ -83,6 +123,7 @@ const AddFarmerPage = () => {
     setMessage("");
     setError("");
     setChannel("sms");
+    setFieldErrors({});
   };
 
   // ── step 1 : send OTP ──────────────────────────────────────────────────────
@@ -156,6 +197,14 @@ const AddFarmerPage = () => {
       setError("Farmer not verified. Please verify the OTP before adding.");
       return;
     }
+
+    // Client-side field validation before hitting the network.
+    const validationErrors = validateFarmerForm(formData);
+    if (Object.keys(validationErrors).length > 0) {
+      setFieldErrors(validationErrors);
+      return;
+    }
+
     setLoading(true);
     setMessage("");
     setError("");
@@ -216,9 +265,10 @@ const AddFarmerPage = () => {
             <input
               type="text" name="name" placeholder="Full name"
               value={formData.name} onChange={handleChange}
-              className="w-full px-4 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-green-500"
+              className={`w-full px-4 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-green-500 ${fieldErrors.name ? "border-red-500" : ""}`}
               required
             />
+            {fieldErrors.name && <p className="mt-1 text-xs text-red-500">{fieldErrors.name}</p>}
           </div>
 
           {/* 2. Field Location */}
@@ -227,9 +277,10 @@ const AddFarmerPage = () => {
             <input
               type="text" name="fieldLocation" placeholder="Village / field location"
               value={formData.fieldLocation} onChange={handleChange}
-              className="w-full px-4 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-green-500"
+              className={`w-full px-4 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-green-500 ${fieldErrors.fieldLocation ? "border-red-500" : ""}`}
               required
             />
+            {fieldErrors.fieldLocation && <p className="mt-1 text-xs text-red-500">{fieldErrors.fieldLocation}</p>}
           </div>
 
           {/* 3. Total Parali */}
@@ -238,9 +289,10 @@ const AddFarmerPage = () => {
             <input
               type="number" name="totalParali"
               value={formData.totalParali} onChange={handleChange}
-              className="w-full px-4 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-green-500"
+              className={`w-full px-4 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-green-500 ${fieldErrors.totalParali ? "border-red-500" : ""}`}
               required
             />
+            {fieldErrors.totalParali && <p className="mt-1 text-xs text-red-500">{fieldErrors.totalParali}</p>}
           </div>
 
           {/* 4 & 5. OTP verification — phone OR email based on channel */}
@@ -290,7 +342,7 @@ const AddFarmerPage = () => {
                       type="text" name="phone"
                       placeholder="10-digit or +91xxxxxxxxxx"
                       value={formData.phone} onChange={handleChange}
-                      className="w-full pl-9 pr-3 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-green-500 text-sm"
+                      className={`w-full pl-9 pr-3 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-green-500 text-sm ${fieldErrors.phone ? "border-red-500" : ""}`}
                       required
                     />
                   </div>
@@ -301,6 +353,7 @@ const AddFarmerPage = () => {
                     {sendingOtp ? "Sending..." : otpSent ? "Resend" : "Send OTP"}
                   </button>
                 </div>
+                {fieldErrors.phone && <p className="text-xs text-red-500 mt-1">{fieldErrors.phone}</p>}
 
                 {/* OTP entry row — appears after Send OTP */}
                 {otpSent && (
@@ -349,7 +402,7 @@ const AddFarmerPage = () => {
                       type="email" name="email"
                       placeholder="example@gmail.com"
                       value={formData.email} onChange={handleChange}
-                      className="w-full pl-9 pr-3 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-green-500 text-sm"
+                      className={`w-full pl-9 pr-3 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-green-500 text-sm ${fieldErrors.email ? "border-red-500" : ""}`}
                       required
                     />
                   </div>
@@ -360,6 +413,7 @@ const AddFarmerPage = () => {
                     {sendingOtp ? "Sending..." : otpSent ? "Resend" : "Send OTP"}
                   </button>
                 </div>
+                {fieldErrors.email && <p className="text-xs text-red-500 mt-1">{fieldErrors.email}</p>}
 
                 {/* OTP entry row — appears after Send OTP */}
                 {otpSent && (
