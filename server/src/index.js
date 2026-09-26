@@ -8,6 +8,7 @@ import {completeProfileRouter} from "./routes/index.js"
 import performanceLogger from "./middlewares/performanceLogger.middleware.js"
 import errorHandler from "./middlewares/errorHandler.middleware.js"
 dotenv.config();
+import requestId from "./middlewares/requrestId.middleware.js";
 
 const app = express();
 
@@ -33,6 +34,7 @@ app.use(cors({
   },
   credentials: true, // Allow credentials (cookies, authorization headers, etc.)
 }));
+app.use(requestId);          // ← first, so req.id exists for all subsequent middleware
 app.use(express.json());
 app.use(cookieParser());
 app.use(performanceLogger); // log response time for every request

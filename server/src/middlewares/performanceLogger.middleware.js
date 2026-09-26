@@ -27,11 +27,11 @@ const performanceLogger = (req, res, next) => {
         if (durationMs > SLOW_THRESHOLD_MS) {
             // Red-flag slow requests in the terminal
             console.warn(
-                `[SLOW] ${method} ${url}  →  ${rounded}ms  (status: ${status})  ← investigate`
+                `[SLOW] ${req.id} ${method} ${url}  →  ${rounded}ms  (status: ${status})  ← investigate`
             );
         } else {
             console.log(
-                `[PERF] ${method} ${url}  →  ${rounded}ms  (status: ${status})`
+                `[PERF] ${req.id} ${method} ${url}  →  ${rounded}ms  (status: ${status})`
             );
         }
     });

@@ -41,12 +41,13 @@ const errorHandler = (err, req, res, next) => {
 
     // Log 500s loudly — these are bugs, not expected failures
     if (statusCode === 500) {
-        console.error("[ERROR]", err.stack);
+        console.error(`[ERROR][${req.id}]`, err.stack);
     }
 
     res.status(statusCode).json({
         success: false,
         message,
+        requestId: req.id,
         // only expose stack trace in development — never in production
         ...(process.env.NODE_ENV === "development" && { stack: err.stack })
     });
